@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParkU — Conteo inteligente de espacios | UNIBE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --ink: #0B1220;
+    --surface: #131C31;
+    --surface-2: #1B2540;
+    --border: #26314D;
+    --gold: #E8863A;
+    --gold-dk: #A9782D;
+    --text: #F4F1EA;
+    --muted: #96A0BA;
+    --faint: #5B6580;
+    --good: #3FBF7F;
+    --bad: #E2544A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: -0.01em; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+  section { position: relative; }
+
+  /* --- Nav --- */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(11,18,32,0.7); backdrop-filter: blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s;
+  }
+  header.scrolled { border-bottom-color: var(--border); }
+  .nav-inner { max-width: 1120px; margin: 0 auto; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; font-family: 'Space Grotesk', sans-serif; }
+  .logo .mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--gold), var(--gold-dk)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #17110A; }
+  .nav-links { display: flex; gap: 34px; font-size: 14px; color: var(--muted); }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { border: 1px solid var(--border); border-radius: 999px; padding: 9px 20px; font-size: 13px; font-weight: 600; }
+  .nav-cta:hover { border-color: var(--gold); color: var(--gold); }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  /* --- Hero --- */
+  .hero { padding: 190px 0 110px; position: relative; }
+  .hero::before {
+    content: ''; position: absolute; top: -140px; right: -220px; width: 620px; height: 620px;
+    border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(232,134,58,0.16), transparent 70%);
+    pointer-events: none;
+  }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; margin-bottom: 22px; }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); animation: blink 1.8s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .hero h1 { font-size: 58px; line-height: 1.06; max-width: 760px; }
+  .hero h1 span { color: var(--gold); }
+  .hero p.lead { max-width: 560px; font-size: 17px; color: var(--muted); margin-top: 24px; }
+  .hero-actions { display: flex; gap: 14px; margin-top: 38px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
+  .btn-primary { background: linear-gradient(135deg, var(--gold), #C7802F); color: #17110A; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+  .hero-stats { display: flex; gap: 48px; margin-top: 72px; flex-wrap: wrap; }
+  .hero-stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 32px; color: var(--text); }
+  .hero-stat span { font-size: 12.5px; color: var(--faint); }
+
+  /* --- Section heading --- */
+  .sec-head { max-width: 640px; margin-bottom: 50px; }
+  .sec-head .eyebrow { margin-bottom: 14px; }
+  .sec-head h2 { font-size: 34px; }
+  .sec-head p { color: var(--muted); margin-top: 14px; font-size: 15px; }
+
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+
+  /* --- Scope section --- */
+  .scope { padding: 100px 0; }
+  .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 760px) { .scope-grid { grid-template-columns: 1fr; } }
+  .scope-card { border-radius: 20px; padding: 32px; border: 1px solid var(--border); }
+  .scope-card.existing { background: var(--surface); }
+  .scope-card.new { background: linear-gradient(165deg, rgba(232,134,58,0.1), var(--surface)); border-color: rgba(232,134,58,0.35); }
+  .scope-card h3 { font-size: 19px; display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .scope-card .tag { font-size: 11.5px; color: var(--faint); margin-bottom: 20px; display: block; }
+  .scope-card ul { list-style: none; }
+  .scope-card li { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); font-size: 14px; color: var(--muted); }
+  .scope-card li:first-of-type { border-top: none; }
+  .scope-card li i { color: var(--faint); margin-top: 3px; font-size: 13px; }
+  .scope-card.new li i { color: var(--gold); }
+  .scope-card li b { color: var(--text); display: block; margin-bottom: 2px; font-weight: 600; }
+
+  /* --- Flow --- */
+  .flow { padding: 100px 0; background: var(--surface); }
+  .flow-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; }
+  @media (max-width: 900px) { .flow-row { grid-template-columns: 1fr; gap: 20px; } }
+  .flow-step { padding: 0 18px; position: relative; }
+  .flow-step .num { width: 42px; height: 42px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 17px; color: var(--gold); margin-bottom: 20px; }
+  .flow-step h4 { font-size: 15.5px; margin-bottom: 8px; }
+  .flow-step p { font-size: 13px; color: var(--muted); }
+  .flow-arrow { position: absolute; top: 21px; right: -6px; color: var(--faint); font-size: 18px; }
+  @media (max-width: 900px) { .flow-arrow { display: none; } }
+  .flow-note { margin-top: 44px; padding: 18px 22px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13.5px; color: var(--muted); display: flex; gap: 12px; align-items: flex-start; }
+  .flow-note i { color: var(--gold); margin-top: 2px; }
+
+  /* --- Prototype demo --- */
+  .proto { padding: 110px 0; }
+  .proto-panel { border-radius: 24px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+  .proto-top { display: flex; justify-content: space-between; align-items: center; padding: 22px 28px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 14px; }
+  .proto-top .live { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--good); }
+  .proto-top .live i { font-size: 7px; animation: blink 1.6s infinite; }
+  .proto-body { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; }
+  @media (max-width: 860px) { .proto-body { grid-template-columns: 1fr; } }
+
+  .lot-visual { padding: 32px 28px; border-right: 1px solid var(--border); }
+  @media (max-width: 860px) { .lot-visual { border-right: none; border-bottom: 1px solid var(--border); } }
+  .gates { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 26px; }
+  .gate { flex: 1; text-align: center; padding: 16px 10px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); }
+  .gate i { font-size: 20px; color: var(--faint); }
+  .gate.pulse i { color: var(--gold); }
+  .gate .lbl { font-size: 11px; color: var(--faint); margin-top: 8px; }
+  .gate .count { font-family: 'Space Grotesk', sans-serif; font-size: 20px; margin-top: 4px; }
+
+  .grid-spots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 26px; }
+  .spot { aspect-ratio: 1.4; border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; transition: background .3s, color .3s, border-color .3s; }
+  .spot.free { color: var(--faint); }
+  .spot.occ { background: rgba(232,134,58,0.14); border-color: rgba(232,134,58,0.4); color: var(--gold); }
+
+  .btn-row { display: flex; gap: 12px; }
+  .btn-row button { flex: 1; padding: 13px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-row button:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-row button:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-row button:disabled:hover { border-color: var(--border); color: var(--text); }
+
+  .readout { padding: 32px 28px; display: flex; flex-direction: column; }
+  .gauge-wrap { display: flex; align-items: center; gap: 22px; margin-bottom: 26px; }
+  .gauge { position: relative; width: 128px; height: 128px; flex-shrink: 0; }
+  .gauge svg { transform: rotate(-90deg); }
+  .gauge-track { fill: none; stroke: var(--border); stroke-width: 9; }
+  .gauge-fill { fill: none; stroke: var(--gold); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 339; stroke-dashoffset: 0; transition: stroke-dashoffset .5s ease, stroke .3s; }
+  .gauge-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge-num b { font-family: 'Space Grotesk', sans-serif; font-size: 28px; }
+  .gauge-num span { font-size: 9.5px; color: var(--faint); margin-top: 2px; }
+  .gauge-copy p:first-child { font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .gauge-copy p:nth-child(2) { font-size: 14.5px; color: var(--muted); }
+
+  .spark { display: flex; align-items: flex-end; gap: 4px; height: 60px; margin-bottom: 24px; }
+  .spark i { flex: 1; background: var(--surface-2); border-radius: 3px 3px 0 0; transition: height .4s ease, background .3s; min-height: 3px; }
+
+  .log { border-top: 1px solid var(--border); padding-top: 16px; flex: 1; }
+  .log-title { font-size: 11.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .log-list { display: flex; flex-direction: column-reverse; gap: 0; max-height: 130px; overflow-y: auto; }
+  .log-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .log-row:first-child { border-bottom: none; }
+  .log-row b { color: var(--text); font-weight: 500; }
+
+  /* --- Hardware --- */
+  .hw { padding: 100px 0; background: var(--surface); }
+  .hw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 34px; }
+  @media (max-width: 860px) { .hw-grid { grid-template-columns: repeat(2, 1fr); } }
+  .hw-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  .hw-card i { font-size: 20px; color: var(--gold); margin-bottom: 16px; display: block; }
+  .hw-card h4 { font-size: 14.5px; margin-bottom: 4px; }
+  .hw-card .part { font-size: 12px; color: var(--faint); margin-bottom: 14px; }
+  .hw-card .price { font-family: 'Space Grotesk', sans-serif; font-size: 17px; color: var(--gold); }
+  .hw-total { display: flex; align-items: center; justify-content: space-between; padding: 24px 28px; border-radius: 16px; background: linear-gradient(120deg, rgba(232,134,58,0.14), var(--surface-2)); border: 1px solid rgba(232,134,58,0.35); flex-wrap: wrap; gap: 16px; }
+  .hw-total div span { display: block; font-size: 12px; color: var(--faint); margin-bottom: 4px; }
+  .hw-total div b { font-family: 'Space Grotesk', sans-serif; font-size: 26px; }
+  .hw-total p { font-size: 13px; color: var(--muted); max-width: 380px; }
+
+  /* --- App showcase --- */
+  .app-showcase { padding: 110px 0; background: var(--surface); }
+  .showcase-grid { display: flex; align-items: center; justify-content: center; gap: 70px; flex-wrap: wrap; }
+  @media (max-width: 900px) { .showcase-grid { flex-direction: column; } }
+  .showcase-copy { max-width: 380px; }
+  .showcase-copy h3 { font-size: 22px; margin-bottom: 6px; }
+  .showcase-copy ul { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 18px; }
+  .showcase-copy li { display: flex; gap: 12px; font-size: 14px; color: var(--muted); }
+  .showcase-copy li i { color: var(--gold); margin-top: 3px; font-size: 13px; width: 16px; }
+  .showcase-copy li b { color: var(--text); display: block; margin-bottom: 2px; font-weight: 600; }
+
+  .phone-stage { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .phone-frame {
+    width: 300px; height: 616px;
+    background: #101A2E;
+    border-radius: 40px;
+    border: 9px solid #05070D;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 116px; height: 20px; background: #05070D; border-radius: 0 0 14px 14px; z-index: 20; }
+  .app-statusbar { display: flex; justify-content: space-between; padding: 13px 22px 4px; font-size: 12px; font-weight: 600; color: var(--text); }
+  .app-screen { flex: 1; overflow-y: auto; padding: 4px 18px 10px; display: none; }
+  .app-screen.active { display: block; }
+  .app-top-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 18px; }
+  .app-brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); letter-spacing: -0.01em; }
+  .app-brand span { color: var(--gold); }
+  .app-avatar { width: 30px; height: 30px; border-radius: 50%; background: #1D2A45; border: 1px solid #2C3A58; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #B9C2D4; }
+  .app-card { background: #16213A; border: 1px solid #232F4C; border-radius: 18px; padding: 16px; margin-bottom: 12px; }
+  .app-gauge-card { display: flex; align-items: center; gap: 16px; }
+  .app-gauge { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+  .app-gauge svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .app-gauge-track { fill: none; stroke: #232F4C; stroke-width: 10; }
+  .app-gauge-fill { fill: none; stroke: var(--gold); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 301; stroke-dashoffset: 100; transition: stroke-dashoffset 1s ease; }
+  .app-gauge-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .app-gauge-num b { font-family: 'Space Grotesk', sans-serif; font-size: 23px; color: var(--text); line-height: 1; }
+  .app-gauge-num span { font-size: 9px; color: var(--faint); margin-top: 2px; }
+  .app-gauge-copy p:first-child { font-size: 11px; color: var(--faint); margin-bottom: 4px; }
+  .app-gauge-copy p:nth-child(2) { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--text); }
+  .app-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--good); background: rgba(63,191,127,0.12); border-radius: 999px; padding: 4px 9px; margin-top: 8px; }
+  .app-pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+  .app-section-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 8px; }
+  .app-zone-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid #1D2942; }
+  .app-zone-row:last-child { border-bottom: none; }
+  .app-zone-name { font-size: 13px; color: var(--text); font-weight: 500; }
+  .app-zone-sub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .app-zone-count { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; }
+  .app-zone-count.low { color: var(--bad); }
+  .app-zone-count.mid { color: var(--gold); }
+  .app-zone-count.high { color: var(--good); }
+  .app-btn-primary { width: 100%; background: var(--gold); color: #1A1005; border: none; border-radius: 13px; padding: 13px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 4px; }
+  .app-carnet { background: linear-gradient(135deg, #1D2A45, #16213A); border: 1px solid #2C3A58; border-radius: 16px; padding: 18px; text-align: center; }
+  .app-carnet-ring { width: 132px; height: 132px; margin: 10px auto 14px; border-radius: 50%; border: 2px dashed #3A4A70; display: flex; align-items: center; justify-content: center; position: relative; }
+  .app-carnet-ring.scanning { border-color: var(--gold); animation: app-pulse 1s infinite; }
+  @keyframes app-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(232,134,58,0.35); } 50% { box-shadow: 0 0 0 13px rgba(232,134,58,0); } }
+  .app-carnet-ring i { width: 42px; height: 42px; border-radius: 9px; background: var(--gold); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; color: #1A1005; font-weight: 700; font-size: 11px; }
+  .app-carnet-status { font-size: 12px; color: var(--faint); margin-top: 4px; }
+  .app-carnet-status.ok { color: var(--good); font-weight: 600; }
+  .app-log { margin-top: 16px; text-align: left; }
+  .app-log-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); padding: 7px 0; border-bottom: 1px solid #1D2942; }
+  .app-log-row b { color: var(--text); font-weight: 500; }
+  .app-notif { display: flex; gap: 11px; padding: 11px 0; border-bottom: 1px solid #1D2942; }
+  .app-notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-top: 6px; flex-shrink: 0; }
+  .app-notif-title { font-size: 12px; color: var(--text); font-weight: 500; }
+  .app-notif-time { font-size: 10px; color: #56607A; margin-top: 3px; }
+  .app-tabbar { display: flex; justify-content: space-around; padding: 9px 12px 16px; border-top: 1px solid #1D2942; background: #0E1728; }
+  .app-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #56607A; font-size: 9.5px; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .app-tab.active { color: var(--gold); }
+  .app-tab-icon { font-size: 16px; }
+  .phone-caption { max-width: 300px; text-align: center; font-size: 12.5px; color: var(--faint); line-height: 1.6; }
+
+  footer { padding: 60px 0 40px; border-top: 1px solid var(--border); }
+  .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 24px; align-items: center; }
+  .footer-team { font-size: 12.5px; color: var(--faint); }
+  .footer-team b { color: var(--muted); display: block; margin-bottom: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header id="siteHeader">
+  <div class="nav-inner">
+    <div class="logo"><div class="mark">PU</div>ParkU</div>
+    <nav class="nav-links">
+      <a href="#alcance">Alcance</a>
+      <a href="#funciona">Cómo funciona</a>
+      <a href="#prototipo">Prototipo</a>
+      <a href="#app">App móvil</a>
+      <a href="#hardware">Componentes</a>
+    </nav>
+    <a class="nav-cta" href="#prototipo">Ver prototipo</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow reveal in"><span class="dot"></span>UNIBE · Comunicación II · Sección 6</div>
+    <h1 class="reveal in">Conteo inteligente para el parqueo en <span>UNIBE</span></h1>
+    <p class="lead reveal in">ParkU no reemplaza la barrera ni el control de acceso por carnet: los complementa. Agrega el conteo de espacios en tiempo real que hoy falta, para que la comunidad sepa dónde hay cupo antes de llegar.</p>
+    <div class="hero-actions reveal in">
+      <a class="btn btn-primary" href="#prototipo"><i class="fa-solid fa-play"></i>Probar el prototipo</a>
+      <a class="btn btn-ghost" href="#funciona">Cómo funciona</a>
+    </div>
+    <div class="hero-stats reveal in">
+      <div class="hero-stat"><b id="statFull">78.7%</b><span>Encuentra el parqueo saturado</span></div>
+      <div class="hero-stat"><b id="statAgree">97.3%</b><span>Respalda una solución tecnológica</span></div>
+      <div class="hero-stat"><b>US$ 480</b><span>Costo estimado del módulo de conteo</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="scope" id="alcance">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Alcance del proyecto</div>
+      <h2>Un componente, no un sistema entero</h2>
+      <p>La universidad ya opera la barrera y la validación del carnet en la entrada. ParkU se integra a ese flujo y añade una sola pieza: saber cuántos espacios quedan libres.</p>
+    </div>
+    <div class="scope-grid">
+      <div class="scope-card existing reveal">
+        <h3><i class="fa-solid fa-check" style="color:var(--faint)"></i>Ya existe en el campus</h3>
+        <span class="tag">No se toca</span>
+        <ul>
+          <li><i class="fa-solid fa-id-card-clip"></i><div><b>Lectura de carnet</b>Control de acceso ya instalado en la entrada.</div></li>
+          <li><i class="fa-solid fa-road-barrier"></i><div><b>Barrera física</b>Se abre y cierra con el sistema actual, sin cambios.</div></li>
+          <li><i class="fa-solid fa-user-shield"></i><div><b>Portería y seguridad</b>Sigue gestionando el ingreso de visitantes.</div></li>
+        </ul>
+      </div>
+      <div class="scope-card new reveal">
+        <h3><i class="fa-solid fa-plus" style="color:var(--gold)"></i>Agrega ParkU</h3>
+        <span class="tag">Lo nuevo</span>
+        <ul>
+          <li><i class="fa-solid fa-satellite-dish"></i><div><b>Sensores de conteo</b>Un sensor en la entrada y otro en la salida, sin tocar la barrera.</div></li>
+          <li><i class="fa-solid fa-cloud"></i><div><b>Disponibilidad en la nube</b>El conteo se actualiza en tiempo real.</div></li>
+          <li><i class="fa-solid fa-display"></i><div><b>Pantalla y app</b>Muestran cuántos espacios quedan antes de entrar.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="flow" id="funciona">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Cómo funciona</div>
+      <h2>El conteo, paso a paso</h2>
+      <p>Todo ocurre en paralelo al proceso de acceso que ya existe: no interrumpe el flujo del carro, solo lo observa.</p>
+    </div>
+    <div class="flow-row">
+      <div class="flow-step reveal">
+        <div class="num"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
+        <h4>Sensor de entrada</h4>
+        <p>Detecta cada vehículo que cruza la barrera hacia adentro y envía la señal al microcontrolador.</p>
+        <span class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+      </div>
+      <div class="flow-step reveal">
+        <div class="num"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+        <h4>Sensor de salida</h4>
+        <p>Detecta cada vehículo que sale y resta del conteo total de espacios ocupados.</p>
+        <span class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+      </div>
+      <div class="flow-step reveal">
+        <div class="num"><i class="fa-solid fa-microchip"></i></div>
+        <h4>ESP32 + nube</h4>
+        <p>Calcula espacios libres (entradas − salidas) y publica el dato en tiempo real.</p>
+        <span class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+      </div>
+      <div class="flow-step reveal">
+        <div class="num"><i class="fa-solid fa-signal"></i></div>
+        <h4>Pantalla y app</h4>
+        <p>La comunidad ve la disponibilidad en la entrada del campus y desde el celular.</p>
+      </div>
+    </div>
+    <div class="flow-note reveal">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>Contar solo en la entrada y la salida —en vez de poner un sensor por plaza— mantiene el módulo en bajo costo.</span>
+    </div>
+  </div>
+</section>
+<section class="hw" id="hardware">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Presupuesto</div>
+      <h2>Lo que cuesta agregar el conteo</h2>
+      <p>Como el acceso ya está resuelto, el prototipo se reduce a cuatro componentes.</p>
+    </div>
+    <div class="hw-grid">
+      <div class="hw-card reveal">
+        <i class="fa-solid fa-microchip"></i>
+        <h4>Microcontrolador</h4>
+        <div class="part">ESP32</div>
+        <div class="price">US$ 10</div>
+      </div>
+      <div class="hw-card reveal">
+        <i class="fa-solid fa-satellite-dish"></i>
+        <h4>Sensores de conteo</h4>
+        <div class="part">2x IR / ultrasónico (HC-SR04)</div>
+        <div class="price">US$ 5</div>
+      </div>
+      <div class="hw-card reveal">
+        <i class="fa-solid fa-display"></i>
+        <h4>Pantalla en la entrada</h4>
+        <div class="part">LCD 16x2 o matriz de LEDs</div>
+        <div class="price">US$ 15</div>
+      </div>
+      <div class="hw-card reveal">
+        <i class="fa-solid fa-plug"></i>
+        <h4>Cableado y montaje</h4>
+        <div class="part">Protoboard, cables, soporte</div>
+        <div class="price">US$ 20</div>
+      </div>
+    </div>
+    <div class="hw-total reveal">
+      <div>
+        <span>Costo total estimado</span>
+        <b>US$ 480</b>
+      </div>
+      <p>Sin incluir el software: el backend puede correr gratis en Firebase o Google Sheets, y la app se conecta a esos datos.</p>
+    </div>
+  </div>
+</section>
+
+<section class="proto" id="prototipo">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Prototipo funcional</div>
+      <h2>Simula el conteo en vivo</h2>
+    </div>
+
+    <div class="proto-panel reveal">
+      <div class="proto-top">
+        <div class="logo" style="font-size:14px"><div class="mark" style="width:24px;height:24px;font-size:10px">PU</div>Panel de conteo — Edificio B</div>
+        <div class="live"><i class="fa-solid fa-circle"></i>Simulación en vivo</div>
+      </div>
+      <div class="proto-body">
+        <div class="lot-visual">
+          <div class="gates">
+            <div class="gate" id="gateIn"><i class="fa-solid fa-arrow-right-to-bracket"></i><div class="lbl">Entradas</div><div class="count" id="countIn">0</div></div>
+            <div class="gate" id="gateOut"><i class="fa-solid fa-arrow-right-from-bracket"></i><div class="lbl">Salidas</div><div class="count" id="countOut">0</div></div>
+          </div>
+          <div class="grid-spots" id="spotsGrid"></div>
+          <div class="btn-row">
+            <button id="btnIn"><i class="fa-solid fa-car"></i>Simular entrada</button>
+            <button id="btnOut"><i class="fa-solid fa-car"></i>Simular salida</button>
+          </div>
+        </div>
+        <div class="readout">
+          <div class="gauge-wrap">
+            <div class="gauge">
+              <svg width="128" height="128" viewBox="0 0 128 128">
+                <circle class="gauge-track" cx="64" cy="64" r="54"></circle>
+                <circle class="gauge-fill" id="gaugeFill" cx="64" cy="64" r="54"></circle>
+              </svg>
+              <div class="gauge-num"><b id="gaugeNum">20</b><span>DE 20 LIBRES</span></div>
+            </div>
+            <div class="gauge-copy">
+              <p>Disponibilidad</p>
+              <p id="statusText">Espacios de sobra</p>
+            </div>
+          </div>
+          <div class="spark" id="spark"></div>
+          <div class="log">
+            <div class="log-title">Actividad reciente</div>
+            <div class="log-list" id="logList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="app-showcase" id="app">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Prototipo de interfaz</div>
+      <h2>La disponibilidad, en la mano</h2>
+      <p>Así consulta la comunidad de UNIBE el conteo desde el celular: espacios libres en vivo, el mismo acceso por carnet que ya existe, y alertas cuando un edificio está por saturarse.</p>
+    </div>
+    <div class="showcase-grid">
+      <div class="phone-stage reveal">
+        <div class="phone-frame">
+          <div class="app-notch"></div>
+          <div class="app-statusbar">
+            <span>9:41</span>
+            <span>●●● UNIBE</span>
+          </div>
+
+          <div class="app-screen active" id="app-screen-inicio">
+            <div class="app-top-row">
+              <div class="app-brand">Park<span>U</span></div>
+              <div class="app-avatar">GD</div>
+            </div>
+
+            <div class="app-card app-gauge-card">
+              <div class="app-gauge">
+                <svg viewBox="0 0 108 108">
+                  <circle class="app-gauge-track" cx="54" cy="54" r="48"></circle>
+                  <circle class="app-gauge-fill" id="appGaugeFill" cx="54" cy="54" r="48"></circle>
+                </svg>
+                <div class="app-gauge-num">
+                  <b id="appGaugeNum">7</b>
+                  <span>de 20 libres</span>
+                </div>
+              </div>
+              <div class="app-gauge-copy">
+                <p>Parqueo Edificio B</p>
+                <p>Disponibilidad en vivo</p>
+                <div class="app-pill"><i></i>Actualizado hace 4 s</div>
+              </div>
+            </div>
+
+            <div class="app-section-title">Zonas del campus</div>
+            <div class="app-card" style="padding: 6px 16px;">
+              <div class="app-zone-row">
+                <div>
+                  <div class="app-zone-name">Edificio A — Docentes</div>
+                  <div class="app-zone-sub">Acceso con carnet</div>
+                </div>
+                <div class="app-zone-count high">12 libres</div>
+              </div>
+              <div class="app-zone-row">
+                <div>
+                  <div class="app-zone-name">Edificio B — Estudiantes</div>
+                  <div class="app-zone-sub">Acceso con carnet</div>
+                </div>
+                <div class="app-zone-count mid">7 libres</div>
+              </div>
+              <div class="app-zone-row">
+                <div>
+                  <div class="app-zone-name">Anexo — Visitantes</div>
+                  <div class="app-zone-sub">Registro en portería</div>
+                </div>
+                <div class="app-zone-count low">1 libre</div>
+              </div>
+            </div>
+
+            <div class="app-section-title">Horario de mayor demanda</div>
+            <div class="app-card">
+              <div class="app-zone-sub" style="margin-bottom:2px">Según el diagnóstico del campus</div>
+              <div class="app-zone-name">2:01 p.m. – 5:00 p.m.</div>
+            </div>
+          </div>
+
+          <div class="app-screen" id="app-screen-acceso">
+            <div class="app-top-row">
+              <div class="app-brand">Park<span>U</span></div>
+              <div class="app-avatar">GD</div>
+            </div>
+            <div class="app-carnet">
+              <div class="app-section-title" style="margin-top:0">Acceso al parqueo</div>
+              <div class="app-carnet-ring" id="appCarnetRing">
+                <i>ID</i>
+              </div>
+              <div class="app-carnet-status" id="appCarnetStatus">Acerca tu carnet al lector</div>
+              <button class="app-btn-primary" onclick="appScanCarnet()">Simular lectura de carnet</button>
+              <div class="app-log">
+                <div class="app-log-row"><span>Hoy, 8:12 a.m.</span><b>Entrada autorizada</b></div>
+                <div class="app-log-row"><span>Ayer, 4:47 p.m.</span><b>Salida registrada</b></div>
+                <div class="app-log-row"><span>Ayer, 12:58 p.m.</span><b>Entrada autorizada</b></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-screen" id="app-screen-notif">
+            <div class="app-top-row">
+              <div class="app-brand">Park<span>U</span></div>
+              <div class="app-avatar">GD</div>
+            </div>
+            <div class="app-section-title" style="margin-top:0">Notificaciones</div>
+            <div class="app-card" style="padding: 4px 16px;">
+              <div class="app-notif">
+                <div class="app-notif-dot"></div>
+                <div>
+                  <div class="app-notif-title">Edificio B está por saturarse: quedan 3 espacios</div>
+                  <div class="app-notif-time">Hace 6 minutos</div>
+                </div>
+              </div>
+              <div class="app-notif">
+                <div class="app-notif-dot" style="background:var(--good)"></div>
+                <div>
+                  <div class="app-notif-title">Tu carnet quedó habilitado para el semestre</div>
+                  <div class="app-notif-time">Hace 2 horas</div>
+                </div>
+              </div>
+              <div class="app-notif">
+                <div class="app-notif-dot" style="background:#56607A"></div>
+                <div>
+                  <div class="app-notif-title">Se liberaron 5 espacios en Edificio A</div>
+                  <div class="app-notif-time">Ayer, 5:03 p.m.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-tabbar">
+            <button class="app-tab active" data-screen="app-screen-inicio" onclick="appShowScreen('app-screen-inicio', this)">
+              <span class="app-tab-icon">⌂</span>Inicio
+            </button>
+            <button class="app-tab" data-screen="app-screen-acceso" onclick="appShowScreen('app-screen-acceso', this)">
+              <span class="app-tab-icon">▤</span>Acceso
+            </button>
+            <button class="app-tab" data-screen="app-screen-notif" onclick="appShowScreen('app-screen-notif', this)">
+              <span class="app-tab-icon">◔</span>Alertas
+            </button>
+          </div>
+        </div>
+        <p class="phone-caption">Usa la barra inferior para navegar entre pantallas y el botón de Acceso para simular la lectura del carnet.</p>
+      </div>
+
+      <div class="showcase-copy reveal">
+        <div class="eyebrow">App móvil</div>
+        <h3>Tres pantallas, un solo propósito</h3>
+        <ul>
+          <li><i class="fa-solid fa-gauge-high"></i><div><b>Inicio</b>Disponibilidad en vivo del edificio y de cada zona del campus.</div></li>
+          <li><i class="fa-solid fa-id-card-clip"></i><div><b>Acceso</b>Refleja el mismo control de acceso por carnet que ya opera la barrera.</div></li>
+          <li><i class="fa-solid fa-bell"></i><div><b>Alertas</b>Avisa cuando un edificio está por saturarse o se liberan espacios.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <div class="logo"><div class="mark">PU</div>ParkU</div>
+    <div class="footer-team">
+      <b>Comunicación II · Sección 6 · UNIBE</b>
+      Gabriel Diaz 25-0656 · Pablo Burgos 26-1684 · Javier Peña 26-1253 · Diana Rosario 25-1312 · Franco Marranzini 26-0692
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Header blur on scroll
+  const header = document.getElementById('siteHeader');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 10);
+  });
+
+  // Reveal on scroll
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.15 });
+  revealEls.forEach(el => io.observe(el));
+
+  // Smooth nav
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+
+  // ---- Live counting prototype ----
+  const TOTAL = 20;
+  let occupied = 13, ins = 41, outs = 28;
+  const history = [8, 10, 9, 11, 13, 12, 14, 13];
+
+  const spotsGrid = document.getElementById('spotsGrid');
+  const gaugeFill = document.getElementById('gaugeFill');
+  const gaugeNum = document.getElementById('gaugeNum');
+  const statusText = document.getElementById('statusText');
+  const countIn = document.getElementById('countIn');
+  const countOut = document.getElementById('countOut');
+  const logList = document.getElementById('logList');
+  const sparkEl = document.getElementById('spark');
+  const btnIn = document.getElementById('btnIn');
+  const btnOut = document.getElementById('btnOut');
+  const gateIn = document.getElementById('gateIn');
+  const gateOut = document.getElementById('gateOut');
+
+  const CIRC = 2 * Math.PI * 54;
+
+  function renderSpots() {
+    spotsGrid.innerHTML = '';
+    for (let i = 0; i < TOTAL; i++) {
+      const d = document.createElement('div');
+      d.className = 'spot ' + (i < occupied ? 'occ' : 'free');
+      d.innerHTML = i < occupied ? '<i class="fa-solid fa-car"></i>' : '';
+      spotsGrid.appendChild(d);
+    }
+  }
+
+  function renderSpark() {
+    sparkEl.innerHTML = '';
+    const max = TOTAL;
+    history.forEach(v => {
+      const bar = document.createElement('i');
+      const pct = Math.max(6, (v / max) * 100);
+      bar.style.height = pct + '%';
+      bar.style.background = v / max > 0.85 ? 'var(--bad)' : (v / max > 0.6 ? 'var(--gold)' : 'var(--good)');
+      sparkEl.appendChild(bar);
+    });
+  }
+
+  function render() {
+    const free = TOTAL - occupied;
+    const ratio = free / TOTAL;
+    gaugeFill.style.strokeDashoffset = CIRC * (1 - ratio);
+    gaugeFill.style.stroke = ratio > 0.35 ? 'var(--good)' : (ratio > 0.12 ? 'var(--gold)' : 'var(--bad)');
+    gaugeNum.textContent = free;
+    statusText.textContent = ratio > 0.35 ? 'Espacios de sobra' : (ratio > 0.12 ? 'Disponibilidad limitada' : 'Parqueo casi saturado');
+    countIn.textContent = ins;
+    countOut.textContent = outs;
+    btnIn.disabled = occupied >= TOTAL;
+    btnOut.disabled = occupied <= 0;
+    renderSpots();
+    renderSpark();
+  }
+
+  function log(text, icon) {
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    const now = new Date();
+    const time = now.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    row.innerHTML = '<b>' + text + '</b><span>' + time + '</span>';
+    logList.appendChild(row);
+    while (logList.children.length > 6) logList.removeChild(logList.firstChild);
+  }
+
+  function pulse(gate) {
+    gate.classList.add('pulse');
+    setTimeout(() => gate.classList.remove('pulse'), 400);
+  }
+
+  btnIn.addEventListener('click', () => {
+    if (occupied >= TOTAL) return;
+    occupied++; ins++;
+    history.push(occupied); if (history.length > 8) history.shift();
+    pulse(gateIn);
+    log('Vehículo entró por el sensor de entrada', 'in');
+    render();
+  });
+
+  btnOut.addEventListener('click', () => {
+    if (occupied <= 0) return;
+    occupied--; outs++;
+    history.push(occupied); if (history.length > 8) history.shift();
+    pulse(gateOut);
+    log('Vehículo salió por el sensor de salida', 'out');
+    render();
+  });
+
+  render();
+  log('Sistema iniciado — conteo sincronizado', 'sys');
+
+  // ---- Mockup de la app móvil ----
+  function appShowScreen(id, btn) {
+    document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function appSetGauge(free, total) {
+    const circumference = 2 * Math.PI * 48;
+    const ratio = free / total;
+    const offset = circumference * (1 - ratio);
+    document.getElementById('appGaugeFill').style.strokeDashoffset = offset;
+    document.getElementById('appGaugeNum').textContent = free;
+  }
+  appSetGauge(7, 20);
+
+  function appScanCarnet() {
+    const ring = document.getElementById('appCarnetRing');
+    const status = document.getElementById('appCarnetStatus');
+    ring.classList.add('scanning');
+    status.textContent = 'Leyendo carnet...';
+    status.classList.remove('ok');
+    setTimeout(() => {
+      ring.classList.remove('scanning');
+      status.textContent = 'Acceso autorizado — barrera abierta';
+      status.classList.add('ok');
+      setTimeout(() => {
+        status.textContent = 'Acerca tu carnet al lector';
+        status.classList.remove('ok');
+      }, 2400);
+    }, 900);
+  }
+</script>
+
+</body>
+</html>

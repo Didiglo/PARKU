@@ -507,7 +507,7 @@
                   <div class="app-zone-name">Edificio B — Estudiantes</div>
                   <div class="app-zone-sub">Acceso con carnet</div>
                 </div>
-                <div class="app-zone-count mid">7 libres</div>
+                <div class="app-zone-count mid" id="appZoneBCount">7 libres</div>
               </div>
               <div class="app-zone-row">
                 <div>
@@ -691,6 +691,7 @@
     btnOut.disabled = occupied <= 0;
     renderSpots();
     renderSpark();
+    appSyncAvailability(free, TOTAL, ratio);
   }
 
   function log(text, icon) {
@@ -737,14 +738,21 @@
     btn.classList.add('active');
   }
 
-  function appSetGauge(free, total) {
+  function appSyncAvailability(free, total, ratio) {
     const circumference = 2 * Math.PI * 48;
-    const ratio = free / total;
     const offset = circumference * (1 - ratio);
-    document.getElementById('appGaugeFill').style.strokeDashoffset = offset;
+    const fill = document.getElementById('appGaugeFill');
+    fill.style.strokeDashoffset = offset;
+    fill.style.stroke = ratio > 0.35 ? 'var(--good)' : (ratio > 0.12 ? 'var(--gold)' : 'var(--bad)');
     document.getElementById('appGaugeNum').textContent = free;
+
+    const zoneCount = document.getElementById('appZoneBCount');
+    if (zoneCount) {
+      zoneCount.textContent = free + ' libres';
+      zoneCount.classList.remove('low', 'mid', 'high');
+      zoneCount.classList.add(ratio > 0.35 ? 'high' : (ratio > 0.12 ? 'mid' : 'low'));
+    }
   }
-  appSetGauge(7, 20);
 
   function appScanCarnet() {
     const ring = document.getElementById('appCarnetRing');
